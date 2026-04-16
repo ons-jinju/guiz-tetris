@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>덧셈 퀴즈 & 테트리스</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Jua', 'Malgun Gothic', sans-serif;
+      min-height: 100vh;
+      overflow: hidden;
+      background: #667eea;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .screen.active { display: flex; }
+
+    /* ── START ── */
+    #s-start {
+      background: linear-gradient(160deg, #667eea 0%, #764ba2 100%);
+    }
+    .start-card {
+      background: #fff;
+      border-radius: 32px;
+      padding: 40px 44px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+      max-width: 380px;
+      width: 92%;
+    }
+    .start-mascot   { font-size: 72px; margin-bottom: 8px; }
+    .start-title    { font-size: 38px; color: #5c3d99; margin-bottom: 10px; }
+    .start-desc     { font-size: 17px; color: #666; line-height: 1.65; margin-bottom: 20px; }
+    .start-badge    {
+      display: inline-block;
+      background: #f0e6ff;
+      color: #5c3d99;
+      padding: 6px 22px;
+      border-radius: 20px;
+      font-size: 15px;
+      margin-bottom: 28px;
+    }
+    .btn-primary {
+      display: block; width: 100%; padding: 16px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff; border: none; border-radius: 16px;
+      font-family: 'Jua', sans-serif; font-size: 26px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(118,75,162,.4);
+      transition: transform .12s;
+    }
+    .btn-primary:active { transform: scale(0.96); }
+
+    /* ── QUIZ ── */
+    #s-quiz {
+      background: linear-gradient(160deg, #e0f7ff 0%, #f0e6ff 100%);
+      flex-direction: column;
+      padding: 14px;
+      gap: 12px;
+    }
+    .quiz-wrap {
+      width: 100%; max-width: 400px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .quiz-header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #fff; padding: 10px 16px; border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+    .round-badge {
+      background: #667eea; color: #fff;
+      padding: 4px 14px; border-radius: 12px; font-size: 14px;
+    }
+    .q-num-text { font-size: 14px; color: #888; }
+    .stars-row  { display: flex; gap: 3px; flex-wrap: wrap; max-width: 160px; }
+    .star       { font-size: 15px; }
+
+    .question-card {
+      background: #fff; border-radius: 24px;
+      padding: 26px 22px 18px; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    }
+    .question-text {
+      font-size: 54px; color: #333;
+      letter-spacing: 6px; margin-bottom: 16px;
+    }
+    .answer-display {
+      background: #f5f5f5; border: 3px solid #ddd; border-radius: 14px;
+      min-height: 64px; display: flex; align-items: center; justify-content: center;
+      font-size: 42px; color: #333; margin-bottom: 10px;
+      transition: border-color .2s, background .2s;
+    }
+    .answer-display.correct { border-color: #00b894; background: #d4f8e8; }
+    .answer-display.wrong   { border-color: #ff6b6b; background: #ffe0e0; }
+
+    .feedback-text { font-size: 20px; min-height: 28px; color: #999; }
+    .feedback-text.correct { color: #00b894; }
+    .feedback-text.wrong   { color: #ff6b6b; }
+
+    .numpad {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .numpad button {
+      height: 70px; border: none; border-radius: 14px;
+      font-family: 'Jua', sans-serif; font-size: 30px; color: #333;
+      background: #fff; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+      transition: transform .1s;
+    }
+    .numpad button:active { transform: scale(0.91); }
+    .btn-del { background: #fff0f0 !important; color: #ff6b6b !important; font-size: 26px !important; }
+    .btn-ok  {
+      background: linear-gradient(135deg, #00b894, #00cec9) !important;
+      color: #fff !important; font-size: 34px !important;
+    }
+
+    /* ── CELEBRATE ── */
+    #s-celebrate {
+      background: radial-gradient(circle at 50% 40%, #1a1a40 0%, #0a0a1a 100%);
+      flex-direction: column;
+    }
+    .celebrate-card { text-align: center; position: relative; z-index: 60; }
+    .celebrate-title {
+      font-size: 54px; color: #ffd32a;
+      text-shadow: 0 0 30px rgba(255,211,42,.7);
+      animation: pulse .7s ease-in-out infinite alternate;
+    }
+    .celebrate-sub  { font-size: 26px; color: #fff; margin-top: 14px; }
+    .celebrate-hint { font-size: 18px; color: #aaa; margin-top: 8px; }
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to   { transform: scale(1.07); }
+    }
+
+    /* ── TETRIS ── */
+    #s-tetris {
+      background: #0f0f1a;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      align-items: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* ── Touch Controls ── */
+    .touch-pad {
+      display: flex; flex-direction: column; gap: 8px;
+      width: 100%; max-width: 300px;
+      padding-bottom: 12px;
+    }
+    .touch-row { display: flex; gap: 8px; }
+    .touch-btn {
+      flex: 1; height: 58px;
+      background: #1e1e3a; border: 1px solid #3a3a5a; border-radius: 12px;
+      color: #fff; font-family: 'Jua', sans-serif; font-size: 20px;
+      cursor: pointer; touch-action: manipulation;
+      user-select: none; -webkit-user-select: none;
+      transition: filter .1s;
+    }
+    .touch-btn:active        { filter: brightness(0.7); }
+    .touch-btn.t-rot  { background: linear-gradient(135deg, #667eea, #764ba2); border-color: #667eea; }
+    .touch-btn.t-drop { background: linear-gradient(135deg, #00b894, #00cec9); border-color: #00b894; }
+    .tetris-timer-bar {
+      display: flex; align-items: center; gap: 14px;
+      background: #1a1a2e; padding: 10px 20px; border-radius: 14px;
+      color: #fff; font-size: 18px;
+      width: 100%; max-width: 470px;
+    }
+    #t-timer { font-size: 28px; color: #00d4ff; font-weight: bold; }
+    #t-timer.urgent { color: #ff6b6b; animation: blink .45s infinite alternate; }
+    @keyframes blink { to { opacity: .35; } }
+    .t-round-tag {
+      margin-left: auto; background: #667eea;
+      padding: 4px 14px; border-radius: 10px; font-size: 14px;
+    }
+    .tetris-inner { display: flex; gap: 14px; }
+    #t-board {
+      display: block; border: 2px solid #2a2a4a; border-radius: 4px;
+      box-shadow: 0 0 30px rgba(0,200,255,.12);
+    }
+    .t-sidebar {
+      display: flex; flex-direction: column; gap: 10px; min-width: 118px;
+    }
+    .t-panel {
+      background: #1a1a2e; border: 1px solid #2a2a4a;
+      border-radius: 10px; padding: 10px 12px;
+    }
+    .t-label { font-size: 10px; letter-spacing: 2px; color: #666; text-transform: uppercase; }
+    .t-value { font-size: 24px; color: #00d4ff; font-weight: bold; }
+    .t-keys  { font-size: 11px; color: #555; line-height: 2; }
+
+    @media (max-width: 480px) {
+      .t-sidebar        { display: none; }
+      .tetris-timer-bar { max-width: 300px; font-size: 14px; padding: 8px 12px; }
+      #t-timer          { font-size: 22px; }
+      .touch-pad        { max-width: 300px; }
+    }
+
+    /* ── COMPLETE ── */
+    #s-complete {
+      background: linear-gradient(160deg, #f6d365 0%, #fda085 100%);
+    }
+    .complete-card {
+      background: #fff; border-radius: 32px;
+      padding: 48px 48px 40px; text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,.22);
+      max-width: 380px; width: 92%;
+      position: relative; z-index: 60;
+    }
+    .complete-icon  { font-size: 76px; margin-bottom: 10px; }
+    .complete-title { font-size: 40px; color: #e17055; margin-bottom: 8px; }
+    .complete-sub   { font-size: 19px; color: #888; margin-bottom: 32px; }
+
+    /* ── Fireworks ── */
+    #fw-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 50; display: none;
+    }
+
+    /* ── Shake ── */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-9px); }
+      40%      { transform: translateX(9px); }
+      60%      { transform: translateX(-6px); }
+      80%      { transform: translateX(6px); }
+    }
+    .shake { animation: shake .4s ease; }
+
+    /* ── WORD QUIZ ── */
+    #s-word {
+      background: linear-gradient(160deg, #fff8e1 0%, #fce4ec 100%);
+      flex-direction: column;
+      padding: 14px;
+      gap: 12px;
+    }
+    .word-wrap { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
+    .word-emoji { font-size: 96px; line-height: 1; margin-bottom: 6px; }
+    .word-q-label { font-size: 18px; color: #888; margin-bottom: 6px; }
+    .word-choices {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .word-choice {
+      padding: 18px 8px; background: #fff;
+      border: 3px solid #e0d0ff; border-radius: 16px;
+      font-family: 'Jua', sans-serif; font-size: 22px; color: #333;
+      cursor: pointer; touch-action: manipulation;
+      box-shadow: 0 3px 10px rgba(0,0,0,.08);
+      transition: transform .1s;
+    }
+    .word-choice:active             { transform: scale(0.93); }
+    .word-choice.correct            { border-color: #00b894; background: #d4f8e8; color: #00795a; }
+    .word-choice.wrong              { border-color: #ff6b6b; background: #ffe0e0; }
+
+    /* ── GACHA ── */
+    #s-gacha {
+      background: linear-gradient(160deg, #1a1a40 0%, #0d0d25 100%);
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px;
+      align-items: center;
+    }
+    .gacha-title    { font-size: 36px; color: #ffd32a; text-align: center; text-shadow: 0 0 20px rgba(255,211,42,.6); }
+    .gacha-subtitle { font-size: 20px; color: #ccc; text-align: center; }
+    .gacha-cards    { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .gacha-card {
+      width: 68px; height: 100px;
+      background: linear-gradient(160deg, #667eea, #764ba2);
+      border-radius: 14px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 26px; color: #fff;
+      cursor: pointer; user-select: none; touch-action: manipulation;
+      box-shadow: 0 6px 20px rgba(118,75,162,.5);
+      transition: transform .2s, opacity .3s;
+      position: relative;
+    }
+    .gacha-card:hover:not(.revealed):not(.off) { transform: translateY(-8px); }
+    .gacha-card.off      { opacity: 0.25; cursor: default; pointer-events: none; }
+    .gacha-card.revealed {
+      background: linear-gradient(160deg, #ffd32a, #ffaa00);
+      color: #333; font-size: 12px; text-align: center;
+      padding: 6px 4px; cursor: default;
+      animation: revealPop .45s cubic-bezier(.34,1.56,.64,1);
+    }
+    .gacha-card-num  { font-size: 28px; font-weight: bold; }
+    .gacha-card-icon { font-size: 30px; }
+    .gacha-card-text { font-size: 11px; word-break: keep-all; line-height: 1.3; }
+    @keyframes revealPop {
+      0%   { transform: scale(0.6) rotate(-8deg); }
+      60%  { transform: scale(1.15) rotate(4deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+    .gacha-result {
+      text-align: center; animation: fadeIn .5s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .gacha-result-emoji { font-size: 64px; margin-bottom: 8px; }
+    .gacha-result-text  { font-size: 28px; color: #fff; margin-bottom: 20px; word-break: keep-all; }
+    .gacha-result-text.kkwang { color: #aaa; font-size: 22px; }
+  </style>
+</head>
+<body>
+
+<canvas id="fw-canvas"></canvas>
+
+<!-- ── START ── -->
+<div class="screen active" id="s-start">
+  <div class="start-card">
+    <div class="start-mascot">🐥</div>
+    <div class="start-title">덧셈 퀴즈!</div>
+    <div class="start-desc">
+      10문제를 모두 맞추면<br>테트리스(3분)를 할 수 있어요!
+    </div>
+    <div class="start-badge">🌟 총 10라운드 🌟</div>
+    <button class="btn-primary" id="btn-start">시작!</button>
+  </div>
+</div>
+
+<!-- ── QUIZ ── -->
+<div class="screen" id="s-quiz">
+  <div class="quiz-wrap">
+    <div class="quiz-header">
+      <div class="round-badge">라운드 <span id="q-round">1</span>/10</div>
+      <div class="stars-row" id="q-stars"></div>
+      <div class="q-num-text">문제 <span id="q-num">1</span>/10</div>
+    </div>
+    <div class="question-card">
+      <div class="question-text" id="q-text">? + ? = ?</div>
+      <div class="answer-display" id="q-ans-box">_</div>
+      <div class="feedback-text" id="q-feedback"></div>
+    </div>
+    <div class="numpad">
+      <button onclick="numInput('7')">7</button>
+      <button onclick="numInput('8')">8</button>
+      <button onclick="numInput('9')">9</button>
+      <button onclick="numInput('4')">4</button>
+      <button onclick="numInput('5')">5</button>
+      <button onclick="numInput('6')">6</button>
+      <button onclick="numInput('1')">1</button>
+      <button onclick="numInput('2')">2</button>
+      <button onclick="numInput('3')">3</button>
+      <button class="btn-del" onclick="numDelete()">←</button>
+      <button onclick="numInput('0')">0</button>
+      <button class="btn-ok" onclick="numSubmit()">✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CELEBRATE ── -->
+<div class="screen" id="s-celebrate">
+  <div class="celebrate-card">
+    <div class="celebrate-title">🎉 완벽해요! 🎉</div>
+    <div class="celebrate-sub">10문제 모두 정답!</div>
+    <div class="celebrate-hint" id="cel-hint">테트리스를 시작할게요!</div>
+  </div>
+</div>
+
+<!-- ── TETRIS ── -->
+<div class="screen" id="s-tetris">
+  <div class="tetris-timer-bar">
+    <span>⏱ 남은 시간:</span>
+    <span id="t-timer">3:00</span>
+    <span class="t-round-tag">라운드 <span id="t-round">1</span>/10</span>
+  </div>
+  <div class="tetris-inner">
+    <canvas id="t-board" width="300" height="600"></canvas>
+    <div class="t-sidebar">
+      <div class="t-panel">
+        <div class="t-label">점수</div>
+        <div class="t-value" id="t-score">0</div>
+      </div>
+      <div class="t-panel">
+        <div class="t-label">레벨</div>
+        <div class="t-value" id="t-level" style="color:#ff9f43">1</div>
+      </div>
+      <div class="t-panel">
+        <div class="t-label">다음</div>
+        <canvas id="t-next" width="112" height="112"></canvas>
+      </div>
+      <div class="t-panel t-keys">
+        ← → 이동<br>
+        ↑ 회전<br>
+        ↓ 내리기<br>
+        Space 낙하
+      </div>
+    </div>
+  </div>
+  <div class="touch-pad">
+    <div class="touch-row">
+      <button class="touch-btn"       ontouchstart="event.preventDefault();touchMove(-1)" onclick="touchMove(-1)">◀</button>
+      <button class="touch-btn t-rot" ontouchstart="event.preventDefault();touchRotate()" onclick="touchRotate()">↻ 회전</button>
+      <button class="touch-btn"       ontouchstart="event.preventDefault();touchMove(1)"  onclick="touchMove(1)">▶</button>
+    </div>
+    <div class="touch-row">
+      <button class="touch-btn"        ontouchstart="event.preventDefault();touchDown()" onclick="touchDown()">▼ 내리기</button>
+      <button class="touch-btn t-drop" ontouchstart="event.preventDefault();touchHard()" onclick="touchHard()">⬇ 낙하</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── WORD QUIZ ── -->
+<div class="screen" id="s-word">
+  <div class="word-wrap">
+    <div class="quiz-header">
+      <div class="round-badge">라운드 <span id="w-round">1</span>/10</div>
+      <div class="stars-row" id="w-stars"></div>
+      <div class="q-num-text">문제 <span id="w-num">1</span>/10</div>
+    </div>
+    <div class="question-card" style="text-align:center;">
+      <div class="word-emoji" id="w-emoji">🐶</div>
+      <div class="word-q-label">이 그림의 이름은?</div>
+      <div class="feedback-text" id="w-feedback"></div>
+    </div>
+    <div class="word-choices" id="w-choices"></div>
+  </div>
+</div>
+
+<!-- ── GACHA ── -->
+<div class="screen" id="s-gacha">
+  <div class="gacha-title">🎊 뽑기 시간! 🎊</div>
+  <div class="gacha-subtitle">번호를 하나 골라봐요!</div>
+  <div class="gacha-cards" id="g-cards"></div>
+  <div class="gacha-result" id="g-result" style="display:none">
+    <div class="gacha-result-emoji" id="g-emoji"></div>
+    <div class="gacha-result-text"  id="g-text"></div>
+    <button class="btn-primary" id="btn-gacha-next" style="max-width:240px;margin:0 auto;">다음 라운드! →</button>
+  </div>
+</div>
+
+<!-- ── COMPLETE ── -->
+<div class="screen" id="s-complete">
+  <div class="complete-card">
+    <div class="complete-icon">🏆</div>
+    <div class="complete-title">대단해요!</div>
+    <div class="complete-sub">10라운드를 모두 완료했어요! 🌟</div>
+    <button class="btn-primary" id="btn-reset">다시 하기</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let round       = 1;
+let qIndex      = 0;
+let questions   = [];
+let inputStr    = '';
+let inputLocked = false;
+
+/* ════════════════════════════════════════
+   SCREEN
+════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ════════════════════════════════════════
+   QUESTION GENERATOR  (1학년 수준)
+════════════════════════════════════════ */
+function generateQuestions() {
+  const result = [];
+  const used   = new Set();
+
+  while (result.length < 10) {
+    let a, b;
+    if (Math.random() < 0.5) {
+      // 한자리 + 한자리 (1~9)
+      a = randInt(1, 9);
+      b = randInt(1, 9);
+    } else {
+      // 두자리 + 한자리 (10~19 + 1~9)
+      a = randInt(10, 19);
+      b = randInt(1, 9);
+    }
+    const key = `${a}+${b}`;
+    if (!used.has(key)) {
+      used.add(key);
+      result.push({ a, b, ans: a + b });
+    }
+  }
+  return result;
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/* ════════════════════════════════════════
+   GAME FLOW
+════════════════════════════════════════ */
+function startGame() {
+  round = 1;
+  startRound();
+}
+
+function startRound() {
+  questions = generateQuestions();
+  qIndex    = 0;
+  showScreen('s-quiz');
+  renderQuiz();
+}
+
+function renderQuiz() {
+  document.getElementById('q-round').textContent = round;
+  document.getElementById('q-num').textContent   = qIndex + 1;
+
+  const q = questions[qIndex];
+  document.getElementById('q-text').textContent = `${q.a} + ${q.b} = ?`;
+
+  const starsEl = document.getElementById('q-stars');
+  starsEl.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const s = document.createElement('span');
+    s.className   = 'star';
+    s.textContent = i < qIndex ? '⭐' : '☆';
+    starsEl.appendChild(s);
+  }
+
+  inputStr    = '';
+  inputLocked = false;
+  refreshInput();
+  setFeedback('', '');
+  document.getElementById('q-ans-box').className = 'answer-display';
+}
+
+function refreshInput() {
+  document.getElementById('q-ans-box').textContent = inputStr || '_';
+}
+
+/* ── Numpad ── */
+function numInput(d) {
+  if (inputLocked || inputStr.length >= 2) return;
+  inputStr += d;
+  refreshInput();
+}
+
+function numDelete() {
+  if (inputLocked) return;
+  inputStr = inputStr.slice(0, -1);
+  refreshInput();
+}
+
+function numSubmit() {
+  if (inputLocked || inputStr === '') return;
+
+  const userAns = parseInt(inputStr, 10);
+  if (userAns === questions[qIndex].ans) {
+    onCorrect();
+  } else {
+    onWrong();
+  }
+}
+
+function onCorrect() {
+  inputLocked = true;
+  document.getElementById('q-ans-box').className = 'answer-display correct';
+  setFeedback('정답이에요! ⭐', 'correct');
+  setTimeout(() => {
+    qIndex++;
+    if (qIndex >= 10) startCelebrate();
+    else renderQuiz();
+  }, 700);
+}
+
+function onWrong() {
+  inputLocked = true;
+  const box = document.getElementById('q-ans-box');
+  box.className = 'answer-display wrong shake';
+  setFeedback('아쉬워요! 다시 해봐요 💪', 'wrong');
+  setTimeout(() => {
+    inputStr    = '';
+    inputLocked = false;
+    refreshInput();
+    box.className = 'answer-display';
+    setFeedback('', '');
+  }, 1500);
+}
+
+function setFeedback(text, type) {
+  const el = document.getElementById('q-feedback');
+  el.textContent = text;
+  el.className   = 'feedback-text' + (type ? ' ' + type : '');
+}
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', e => {
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+
+  if (active.id === 's-quiz') {
+    if (e.key >= '0' && e.key <= '9') { numInput(e.key); return; }
+    if (e.key === 'Backspace')          { numDelete();     return; }
+    if (e.key === 'Enter')              { numSubmit();     return; }
+  }
+
+  if (active.id === 's-tetris') handleTetrisKey(e);
+});
+
+/* ════════════════════════════════════════
+   FIREWORKS
+════════════════════════════════════════ */
+const fwCanvas = document.getElementById('fw-canvas');
+const fwCtx    = fwCanvas.getContext('2d');
+let fwParticles  = [];
+let fwRunning    = false;
+let fwAnimId     = null;
+let fwLaunchId   = null;
+
+function fwResize() {
+  fwCanvas.width  = window.innerWidth;
+  fwCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', fwResize);
+fwResize();
+
+function fwLaunch() {
+  const colors = ['#ff6b6b','#ffd32a','#00d4ff','#a29bfe','#00b894','#fd79a8','#ff9f43','#6c5ce7'];
+  const x      = Math.random() * fwCanvas.width;
+  const y      = Math.random() * fwCanvas.height * 0.5 + 60;
+  const color  = colors[Math.floor(Math.random() * colors.length)];
+
+  for (let i = 0; i < 80; i++) {
+    const angle = (Math.PI * 2 * i) / 80 + (Math.random() - 0.5) * 0.3;
+    const speed = Math.random() * 7 + 2;
+    fwParticles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      alpha: 1,
+      color,
+      size: Math.random() * 4 + 2,
+    });
+  }
+}
+
+function fwAnimate() {
+  if (!fwRunning) return;
+  fwCtx.fillStyle = 'rgba(0,0,0,0.18)';
+  fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+
+  fwParticles = fwParticles.filter(p => p.alpha > 0.02);
+  fwParticles.forEach(p => {
+    p.x     += p.vx;
+    p.y     += p.vy;
+    p.vy    += 0.13;
+    p.vx    *= 0.98;
+    p.alpha -= 0.017;
+
+    fwCtx.save();
+    fwCtx.globalAlpha = p.alpha;
+    fwCtx.fillStyle   = p.color;
+    fwCtx.shadowColor = p.color;
+    fwCtx.shadowBlur  = 8;
+    fwCtx.beginPath();
+    fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    fwCtx.fill();
+    fwCtx.restore();
+  });
+
+  fwAnimId = requestAnimationFrame(fwAnimate);
+}
+
+function startFireworks(duration) {
+  fwCanvas.style.display = 'block';
+  fwRunning  = true;
+  fwParticles = [];
+
+  let launched = 0;
+  const maxLaunches = Math.ceil(duration / 380);
+  fwLaunchId = setInterval(() => {
+    fwLaunch();
+    launched++;
+    if (launched >= maxLaunches) clearInterval(fwLaunchId);
+  }, 380);
+
+  fwAnimate();
+
+  setTimeout(stopFireworks, duration);
+}
+
+function stopFireworks() {
+  fwRunning = false;
+  clearInterval(fwLaunchId);
+  if (fwAnimId) cancelAnimationFrame(fwAnimId);
+  fwCanvas.style.display = 'none';
+  fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+  fwParticles = [];
+}
+
+/* ════════════════════════════════════════
+   CELEBRATE → TETRIS
+════════════════════════════════════════ */
+function startCelebrate() {
+  showScreen('s-celebrate');
+  document.getElementById('cel-hint').textContent = '테트리스를 시작할게요!';
+  startFireworks(3000);
+  setTimeout(() => {
+    stopFireworks();
+    startTetrisRound();
+  }, 3200);
+}
+
+/* ════════════════════════════════════════
+   TETRIS ENGINE
+════════════════════════════════════════ */
+const TC   = 10, TR = 20, CELL = 30;
+const NCELL = 26;
+
+const SHAPES = [
+  { color: '#00d4ff', cells: [[1,1,1,1]] },
+  { color: '#ffd32a', cells: [[1,1],[1,1]] },
+  { color: '#a29bfe', cells: [[0,1,0],[1,1,1]] },
+  { color: '#00b894', cells: [[0,1,1],[1,1,0]] },
+  { color: '#ff6b6b', cells: [[1,1,0],[0,1,1]] },
+  { color: '#0984e3', cells: [[1,0,0],[1,1,1]] },
+  { color: '#ff9f43', cells: [[0,0,1],[1,1,1]] },
+];
+const SCORE_TBL = [0, 100, 300, 500, 800];
+
+let tBoard, tPiece, tNext;
+let tScore, tLevel, tLines, tOver;
+let tDropId  = null;
+let tTimerId = null;
+let tLeft    = 180;
+
+const tCv  = document.getElementById('t-board');
+const tCtx = tCv.getContext('2d');
+const nCv  = document.getElementById('t-next');
+const nCtx = nCv.getContext('2d');
+
+function tRand() {
+  const s = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  return {
+    color: s.color,
+    cells: s.cells.map(r => [...r]),
+    x: Math.floor(TC / 2) - Math.floor(s.cells[0].length / 2),
+    y: 0,
+  };
+}
+
+function tRotate(cells) {
+  return cells[0].map((_, i) => cells.map(r => r[i]).reverse());
+}
+
+function tHit(cells, ox, oy) {
+  for (let r = 0; r < cells.length; r++)
+    for (let c = 0; c < cells[r].length; c++)
+      if (cells[r][c]) {
+        const nx = ox + c, ny = oy + r;
+        if (nx < 0 || nx >= TC || ny >= TR) return true;
+        if (ny >= 0 && tBoard[ny][nx])       return true;
+      }
+  return false;
+}
+
+function tLock() {
+  tPiece.cells.forEach((row, r) =>
+    row.forEach((v, c) => {
+      if (v) tBoard[tPiece.y + r][tPiece.x + c] = tPiece.color;
+    })
+  );
+
+  let cleared = 0;
+  for (let r = TR - 1; r >= 0; r--) {
+    if (tBoard[r].every(Boolean)) {
+      tBoard.splice(r, 1);
+      tBoard.unshift(Array(TC).fill(null));
+      cleared++;
+      r++;
+    }
+  }
+
+  if (cleared) {
+    tLines += cleared;
+    tScore += SCORE_TBL[Math.min(cleared, 4)] * tLevel;
+    tLevel  = Math.floor(tLines / 10) + 1;
+    document.getElementById('t-score').textContent = tScore;
+    document.getElementById('t-level').textContent = tLevel;
+    tReschedule();
+  }
+
+  tPiece = tNext;
+  tNext  = tRand();
+
+  if (tHit(tPiece.cells, tPiece.x, tPiece.y)) {
+    tOver = true;
+    tDraw();
+    // 2초 후 자동 재시작 (타이머는 계속)
+    setTimeout(tRestart, 2000);
+  }
+}
+
+function tRestart() {
+  if (!document.getElementById('s-tetris').classList.contains('active')) return;
+  tBoard = Array.from({ length: TR }, () => Array(TC).fill(null));
+  tScore = 0; tLevel = 1; tLines = 0; tOver = false;
+  tPiece = tRand(); tNext = tRand();
+  document.getElementById('t-score').textContent = '0';
+  document.getElementById('t-level').textContent = '1';
+  tReschedule();
+  tDraw();
+}
+
+function tDrop() {
+  if (tOver) return;
+  if (!tHit(tPiece.cells, tPiece.x, tPiece.y + 1)) tPiece.y++;
+  else tLock();
+  tDraw();
+}
+
+function tHardDrop() {
+  if (tOver) return;
+  while (!tHit(tPiece.cells, tPiece.x, tPiece.y + 1)) tPiece.y++;
+  tLock();
+  tDraw();
+}
+
+function tReschedule() {
+  clearInterval(tDropId);
+  tDropId = setInterval(tDrop, Math.max(80, 600 - (tLevel - 1) * 55));
+}
+
+function tDrawBlock(c, r, color, ctx = tCtx, size = CELL) {
+  const x = c * size, y = r * size;
+  ctx.fillStyle = color;
+  ctx.fillRect(x + 1, y + 1, size - 2, size - 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  ctx.fillRect(x + 1, y + 1, size - 2, 4);
+  ctx.fillRect(x + 1, y + 1, 4, size - 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.fillRect(x + 1, y + size - 5, size - 2, 4);
+}
+
+function tGhostY() {
+  let gy = tPiece.y;
+  while (!tHit(tPiece.cells, tPiece.x, gy + 1)) gy++;
+  return gy;
+}
+
+function tDraw() {
+  tCtx.clearRect(0, 0, tCv.width, tCv.height);
+
+  // grid lines
+  tCtx.strokeStyle = '#1a1a2e';
+  for (let r = 0; r < TR; r++)
+    for (let c = 0; c < TC; c++)
+      tCtx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+
+  // board
+  tBoard.forEach((row, r) => row.forEach((col, c) => { if (col) tDrawBlock(c, r, col); }));
+
+  if (!tOver) {
+    // ghost
+    const gy = tGhostY();
+    tPiece.cells.forEach((row, r) => row.forEach((v, c) => {
+      if (v) {
+        tCtx.fillStyle = 'rgba(255,255,255,0.07)';
+        tCtx.fillRect((tPiece.x + c) * CELL + 1, (gy + r) * CELL + 1, CELL - 2, CELL - 2);
+      }
+    }));
+    // piece
+    tPiece.cells.forEach((row, r) => row.forEach((v, c) => {
+      if (v) tDrawBlock(tPiece.x + c, tPiece.y + r, tPiece.color);
+    }));
+  } else {
+    tCtx.fillStyle = 'rgba(0,0,0,0.62)';
+    tCtx.fillRect(0, 0, tCv.width, tCv.height);
+    tCtx.font = `bold 22px 'Jua', sans-serif`;
+    tCtx.textAlign = 'center';
+    tCtx.fillStyle = '#fff';
+    tCtx.fillText('GAME OVER', tCv.width / 2, tCv.height / 2 - 14);
+    tCtx.font = `15px 'Jua', sans-serif`;
+    tCtx.fillStyle = '#aaa';
+    tCtx.fillText('잠시 후 재시작...', tCv.width / 2, tCv.height / 2 + 18);
+  }
+
+  // next piece
+  nCtx.clearRect(0, 0, nCv.width, nCv.height);
+  const ns  = tNext.cells;
+  const nox = Math.floor((4 - ns[0].length) / 2);
+  const noy = Math.floor((4 - ns.length) / 2);
+  ns.forEach((row, r) => row.forEach((v, c) => {
+    if (v) tDrawBlock(nox + c, noy + r, tNext.color, nCtx, NCELL);
+  }));
+}
+
+function handleTetrisKey(e) {
+  if (tOver) return;
+  switch (e.code) {
+    case 'ArrowLeft':
+      if (!tHit(tPiece.cells, tPiece.x - 1, tPiece.y)) tPiece.x--;
+      break;
+    case 'ArrowRight':
+      if (!tHit(tPiece.cells, tPiece.x + 1, tPiece.y)) tPiece.x++;
+      break;
+    case 'ArrowDown':
+      tDrop(); return;
+    case 'ArrowUp': {
+      const r = tRotate(tPiece.cells);
+      if (!tHit(r, tPiece.x, tPiece.y)) tPiece.cells = r;
+      break;
+    }
+    case 'Space':
+      e.preventDefault();
+      tHardDrop(); return;
+    default: return;
+  }
+  tDraw();
+}
+
+/* ── Start Tetris Round ── */
+function startTetrisRound() {
+  tBoard = Array.from({ length: TR }, () => Array(TC).fill(null));
+  tScore = 0; tLevel = 1; tLines = 0; tOver = false;
+  tPiece = tRand(); tNext = tRand();
+
+  document.getElementById('t-score').textContent = '0';
+  document.getElementById('t-level').textContent = '1';
+  document.getElementById('t-round').textContent = round;
+
+  tLeft = 180;
+  updateTimer();
+  document.getElementById('t-timer').classList.remove('urgent');
+
+  showScreen('s-tetris');
+  tReschedule();
+  tDraw();
+
+  tTimerId = setInterval(() => {
+    tLeft--;
+    updateTimer();
+    if (tLeft <= 30) document.getElementById('t-timer').classList.add('urgent');
+    if (tLeft <= 0)  onTetrisEnd();
+  }, 1000);
+}
+
+function updateTimer() {
+  const m = Math.floor(tLeft / 60);
+  const s = tLeft % 60;
+  document.getElementById('t-timer').textContent = `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function stopTetris() {
+  clearInterval(tDropId);
+  clearInterval(tTimerId);
+  tDropId = tTimerId = null;
+}
+
+function onTetrisEnd() {
+  stopTetris();
+  startWordRound();
+}
+
+function onGachaNext() {
+  stopFireworks();
+  if (round >= 10) {
+    showScreen('s-complete');
+    startFireworks(6000);
+  } else {
+    round++;
+    startRound();
+  }
+}
+
+/* ════════════════════════════════════════
+   WORD QUIZ
+════════════════════════════════════════ */
+const WORD_BANK = [
+  { emoji:'🐶', word:'강아지' }, { emoji:'🐱', word:'고양이' },
+  { emoji:'🐰', word:'토끼'  }, { emoji:'🐻', word:'곰'     },
+  { emoji:'🦊', word:'여우'  }, { emoji:'🐸', word:'개구리' },
+  { emoji:'🐧', word:'펭귄'  }, { emoji:'🐘', word:'코끼리' },
+  { emoji:'🦁', word:'사자'  }, { emoji:'🐷', word:'돼지'  },
+  { emoji:'🐔', word:'닭'    }, { emoji:'🦆', word:'오리'   },
+  { emoji:'🐢', word:'거북이'}, { emoji:'🦋', word:'나비'   },
+  { emoji:'🐝', word:'벌'    }, { emoji:'🦀', word:'게'     },
+  { emoji:'🍎', word:'사과'  }, { emoji:'🍌', word:'바나나' },
+  { emoji:'🍇', word:'포도'  }, { emoji:'🍓', word:'딸기'  },
+  { emoji:'🍊', word:'귤'    }, { emoji:'🥕', word:'당근'   },
+  { emoji:'🌽', word:'옥수수'}, { emoji:'🍄', word:'버섯'   },
+  { emoji:'🌸', word:'꽃'    }, { emoji:'📚', word:'책'     },
+  { emoji:'✏️', word:'연필'  }, { emoji:'🎒', word:'가방'   },
+  { emoji:'🌙', word:'달'    }, { emoji:'⭐', word:'별'     },
+  { emoji:'☀️', word:'해'    }, { emoji:'🌈', word:'무지개' },
+  { emoji:'🚗', word:'자동차'}, { emoji:'✈️', word:'비행기' },
+  { emoji:'🚂', word:'기차'  }, { emoji:'🏠', word:'집'     },
+];
+
+let wIndex = 0, wordQuestions = [], wLocked = false;
+
+function generateWordQuestions() {
+  const pool    = [...WORD_BANK].sort(() => Math.random() - .5);
+  const picked  = pool.slice(0, 10);
+  const allWords = WORD_BANK.map(w => w.word);
+  return picked.map(item => {
+    const wrong = allWords.filter(w => w !== item.word)
+                          .sort(() => Math.random() - .5)
+                          .slice(0, 3);
+    const choices = [item.word, ...wrong].sort(() => Math.random() - .5);
+    return { emoji: item.emoji, answer: item.word, choices };
+  });
+}
+
+function startWordRound() {
+  wordQuestions = generateWordQuestions();
+  wIndex = 0;
+  showScreen('s-word');
+  renderWordQuiz();
+}
+
+function renderWordQuiz() {
+  document.getElementById('w-round').textContent = round;
+  document.getElementById('w-num').textContent   = wIndex + 1;
+
+  const starsEl = document.getElementById('w-stars');
+  starsEl.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const s = document.createElement('span');
+    s.className   = 'star';
+    s.textContent = i < wIndex ? '⭐' : '☆';
+    starsEl.appendChild(s);
+  }
+
+  const q = wordQuestions[wIndex];
+  document.getElementById('w-emoji').textContent = q.emoji;
+  document.getElementById('w-feedback').textContent = '';
+  document.getElementById('w-feedback').className   = 'feedback-text';
+
+  const box = document.getElementById('w-choices');
+  box.innerHTML = '';
+  wLocked = false;
+  q.choices.forEach(word => {
+    const btn = document.createElement('button');
+    btn.className   = 'word-choice';
+    btn.textContent = word;
+    btn.addEventListener('click',       () => selectWord(btn, word));
+    btn.addEventListener('touchstart',  e  => { e.preventDefault(); selectWord(btn, word); }, { passive: false });
+    box.appendChild(btn);
+  });
+}
+
+function selectWord(btn, word) {
+  if (wLocked) return;
+  wLocked = true;
+
+  const q   = wordQuestions[wIndex];
+  const all = document.querySelectorAll('.word-choice');
+
+  if (word === q.answer) {
+    btn.classList.add('correct');
+    setWordFeedback('정답이에요! ⭐', 'correct');
+    setTimeout(() => {
+      wIndex++;
+      if (wIndex >= 10) startGacha();
+      else renderWordQuiz();
+    }, 700);
+  } else {
+    btn.classList.add('wrong');
+    // 정답 버튼 표시
+    all.forEach(b => { if (b.textContent === q.answer) b.classList.add('correct'); });
+    setWordFeedback('아쉬워요! 다시 해봐요 💪', 'wrong');
+    setTimeout(() => renderWordQuiz(), 1500);
+  }
+}
+
+function setWordFeedback(text, type) {
+  const el = document.getElementById('w-feedback');
+  el.textContent = text;
+  el.className   = 'feedback-text' + (type ? ' ' + type : '');
+}
+
+/* ════════════════════════════════════════
+   GACHA
+════════════════════════════════════════ */
+const PRIZES = [
+  { emoji: '💋', text: '뽀뽀해주기' },
+  { emoji: '🎁', text: '뽑기해주기' },
+  { emoji: '🛝', text: '놀이터에서\n놀아주기' },
+  { emoji: '🍦', text: '아이스크림\n1개' },
+  { emoji: '😅', text: '꽝' },
+];
+
+function startGacha() {
+  showScreen('s-gacha');
+  document.getElementById('g-result').style.display = 'none';
+  startFireworks(1500);
+
+  const shuffled = [...PRIZES].sort(() => Math.random() - .5);
+  const cardsEl  = document.getElementById('g-cards');
+  cardsEl.innerHTML = '';
+
+  shuffled.forEach((prize, i) => {
+    const card = document.createElement('div');
+    card.className = 'gacha-card';
+    card.innerHTML = `<span class="gacha-card-num">${i + 1}</span>`;
+    card.addEventListener('click',      () => revealCard(card, prize, cardsEl));
+    card.addEventListener('touchstart', e  => { e.preventDefault(); revealCard(card, prize, cardsEl); }, { passive: false });
+    cardsEl.appendChild(card);
+  });
+}
+
+function revealCard(card, prize, cardsEl) {
+  if (card.classList.contains('revealed') || card.classList.contains('off')) return;
+
+  // 나머지 카드 비활성화
+  cardsEl.querySelectorAll('.gacha-card').forEach(c => {
+    if (c !== card) c.classList.add('off');
+  });
+
+  card.classList.add('revealed');
+  card.innerHTML = `<span class="gacha-card-icon">${prize.emoji}</span>
+                    <span class="gacha-card-text">${prize.text}</span>`;
+
+  setTimeout(() => {
+    const result  = document.getElementById('g-result');
+    const isKkwang = prize.text === '꽝';
+    result.style.display = 'flex';
+    result.style.flexDirection = 'column';
+    result.style.alignItems    = 'center';
+    result.style.gap           = '0';
+    document.getElementById('g-emoji').textContent = prize.emoji;
+    const textEl = document.getElementById('g-text');
+    textEl.textContent = isKkwang ? '아쉽지만... 꽝!' : prize.text.replace('\n', ' ');
+    textEl.className   = 'gacha-result-text' + (isKkwang ? ' kkwang' : '');
+    if (!isKkwang) startFireworks(2500);
+  }, 600);
+}
+
+/* ════════════════════════════════════════
+   TOUCH CONTROLS
+════════════════════════════════════════ */
+function touchMove(dx)  { if (tOver) return; if (!tHit(tPiece.cells, tPiece.x + dx, tPiece.y)) tPiece.x += dx; tDraw(); }
+function touchRotate()  { if (tOver) return; const r = tRotate(tPiece.cells); if (!tHit(r, tPiece.x, tPiece.y)) tPiece.cells = r; tDraw(); }
+function touchDown()    { tDrop(); }
+function touchHard()    { tHardDrop(); }
+
+/* ════════════════════════════════════════
+   EVENTS
+════════════════════════════════════════ */
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('btn-reset').addEventListener('click', () => {
+  stopFireworks();
+  stopTetris();
+  round = 1;
+  showScreen('s-start');
+});
+document.getElementById('btn-gacha-next').addEventListener('click', onGachaNext);
+</script>
+</body>
+</html>
